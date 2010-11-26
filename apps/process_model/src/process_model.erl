@@ -34,16 +34,23 @@
 %% Interface functions
 %% -----------------------------------------------------------------------------
 start_link(Opts) ->
-    gen_server:start_link(?MODULE,Opts,[]).
+    %gen_server:start_link(?MODULE,Opts,[]).
+    init(Opts).
 
 step(Pid,Args) ->
-    gen_server:call(Pid,{batch,step_fun(Args)}).
+%    gen_server:call(Pid,{batch,step_fun(Args)}).
+    {reply,Reply,NewState} = handle_call({batch,step_fun(Args)},undefined,Pid),
+    {Reply,NewState}.
 
 batch(Pid,Fun) ->
-    gen_server:call(Pid,{batch,Fun}).
+    %gen_server:call(Pid,{batch,Fun}).
+    {reply,Reply,NewState} = handle_call({batch,Fun},undefined,Pid),
+    {Reply,NewState}.
 
 add_node(Pid, Node) ->
-    gen_server:cast(Pid,{add_node,Node}).
+%    gen_server:cast(Pid,{add_node,Node}).
+    {noreply,NewState} = handle_cast({add_node,Node},Pid),
+    {ok,NewState}.
 
 %% -----------------------------------------------------------------------------
 %% Behaviour functions
@@ -86,6 +93,8 @@ do_step(StepOpts,State) ->
 	       end, State),
     {pm:to_list(NewState),NewState}.
 
+move(Node,Node,_Opts) ->
+    Node;
 move(#pm_node{ x = CurrX, y = CurrY, z = CurrZ, size = CurrSize, id = Id},
      #pm_node{ x = GoalX, y = GoalY, z = GoalZ, size = GoalSize, id = Id},
      #pm_step_opts{ distance = Dist, resize = Resize }) ->
@@ -97,10 +106,10 @@ move(#pm_node{ x = CurrX, y = CurrY, z = CurrZ, size = CurrSize, id = Id},
     DiffSize = GoalSize - CurrSize,
     ResizePerc = max_div(Resize,DiffSize),
     #pm_node{ id = Id,
-	      x = CurrX + DiffX * MovePerc,
-	      y = CurrY + DiffY * MovePerc,
-	      z = CurrZ + DiffZ * MovePerc,
-	      size = CurrSize + DiffSize * ResizePerc }.
+	      x = get_pos(CurrX,DiffX,MovePerc,GoalX),
+	      y = get_pos(CurrY,DiffY,MovePerc,GoalY),
+	      z = get_pos(CurrZ,DiffZ,MovePerc,GoalZ),
+	      size = get_pos(CurrSize,DiffSize,ResizePerc,GoalSize) }.
 
 %% make sure that we don't divide by zero
 max_div(_Target,Base) when Base == 0 ->
@@ -110,3 +119,8 @@ max_div(Target,Base) when Target > Base ->
     1;
 max_div(Target,Base) ->
     Target / Base.
+
+get_pos(Curr,Diff,1,Goal) ->
+    Goal;
+get_pos(Curr,Diff,Perc,Goal) ->
+    Curr + Diff * Perc.
