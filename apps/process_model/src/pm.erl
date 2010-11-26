@@ -32,7 +32,8 @@
 	 
 	 foreach/2,
 	 map/2,
-	 foldl/3]).
+	 foldl/3,
+	 to_list/1]).
 
 %% Behaviour callback exports
 -export([]).
@@ -42,12 +43,12 @@
 %% -----------------------------------------------------------------------------
 size(S)          -> dict:size(S).
 new()            -> dict:new().
-add(K, V, S)     -> dict:store(K, {K,V}, S).
-set(K, V, S)     -> dict:store(K, {K,V}, S).
+add(K, V, S)     -> dict:store(K, V, S).
+set(K, V, S)     -> dict:store(K, V, S).
 del(K, S)        -> dict:erase(K, S).
 get(K, S)        -> case catch dict:fetch(K, S) of 
 			{'EXIT', _} -> undefined;
-			{_, V} -> V
+			V -> V
 		    end.
 is_defined(K, S) -> dict:is_key(K, S).
 
@@ -55,6 +56,7 @@ map(F, S)        -> dict:map(fun(_,V) -> F(V) end, S).
 foldl(F, I, S)   -> dict:fold(fun(_, V, O) -> F(V,O) end, I, S).
 
 foreach(F, S)    -> dict:map(fun(_,V) -> F(V) end, S), S.
+to_list(S)       -> dict:to_list(S).
 %% -----------------------------------------------------------------------------
 %%  Callback functions
 %% -----------------------------------------------------------------------------

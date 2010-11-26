@@ -81,4 +81,32 @@ step_fun(StepOpts) ->
     end.
 
 do_step(StepOpts,State) ->
-    {ok,State}.
+    NewState = pm:map(fun({Curr,Goal}) ->
+		       {move(Curr,Goal,StepOpts),Goal}
+	       end, State),
+    {pm:to_list(NewState),NewState}.
+
+move(#pm_node{ x = CurrX, y = CurrY, z = CurrZ, size = CurrSize, id = Id},
+     #pm_node{ x = GoalX, y = GoalY, z = GoalZ, size = GoalSize, id = Id},
+     #pm_step_opts{ distance = Dist, resize = Resize }) ->
+    DiffX = GoalX - CurrX,
+    DiffY = GoalY - CurrY,
+    DiffZ = GoalZ - CurrZ,
+    TotalLen = math:sqrt(DiffX*DiffX+DiffY*DiffY+DiffZ*DiffZ),
+    MovePerc = max_div(Dist,TotalLen),
+    DiffSize = GoalSize - CurrSize,
+    ResizePerc = max_div(Resize,DiffSize),
+    #pm_node{ id = Id,
+	      x = CurrX + DiffX * MovePerc,
+	      y = CurrY + DiffY * MovePerc,
+	      z = CurrZ + DiffZ * MovePerc,
+	      size = CurrSize + DiffSize * ResizePerc }.
+
+%% make sure that we don't divide by zero
+max_div(_Target,Base) when Base == 0 ->
+    0;
+%% make sure we don't overstep the target
+max_div(Target,Base) when Target > Base ->
+    1;
+max_div(Target,Base) ->
+    Target / Base.
